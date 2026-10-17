@@ -1,0 +1,24 @@
+{
+  "name": "portfolio",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "npm run assets && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "assets": "node scripts/make-assets.mjs",
+    "knowledge": "node scripts/build-knowledge.mjs",
+    "status": "node --env-file=.env.status scripts/publish-status.mjs",
+    "status:watch": "node --env-file=.env.status scripts/publish-status.mjs --watch",
+    "status:dry": "node scripts/publish-status.mjs --dry-run"
+  },
+  "dependencies": {
+    "astro": "5.18.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "typescript": "5.9.3"
+  }
+}

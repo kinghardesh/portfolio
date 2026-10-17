@@ -1,0 +1,33 @@
+---
+import profile from "../data/profile.json";
+import { getCollection } from "astro:content";
+
+const titles = Object.fromEntries((await getCollection("projects")).map((p) => [p.id, p.data.title]));
+---
+
+<section id="skills">
+  <div class="wrap">
+    <h2 class="section-title">My <span class="accent">Skills</span></h2>
+    <p class="section-sub">Every skill links to the project where I used it.</p>
+    <ul class="grid">
+      {profile.skills.map((s) => (
+        <li class="card skill">
+          <h3>{s.name}</h3>
+          <p class="muted">{s.note}</p>
+          <a href={`/projects/${s.proof}/`} class="proof mono">Used in {titles[s.proof] ?? s.proof} →</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  .skill { padding: 26px 28px; display: flex; flex-direction: column; gap: 6px; transition: border-color 0.2s; }
+  .skill:hover { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+  .skill h3 { font-size: 1.2rem; margin: 0; }
+  .skill p { margin: 0; font-size: 0.95rem; }
+  .proof { margin-top: 10px; font-size: 0.78rem; color: var(--accent-2); text-decoration: none; }
+  .proof:hover { text-decoration: underline; }
+</style>

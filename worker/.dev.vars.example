@@ -1,0 +1,4 @@
+# Copy to .dev.vars for local dev. Leave the key empty to run the chat in demo mode.
+ANTHROPIC_API_KEY=
+# Shared secret for scripts/publish-status.mjs to push dashboard status. Same value as STATUS_TOKEN in ../.env.status.
+STATUS_TOKEN=

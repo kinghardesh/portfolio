@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "portfolio-chat",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    // Swap to "claude-haiku-5-5" for a much cheaper (and faster) assistant.
+    "MODEL": "claude-opus-5-5",
+    // Comma-separated origins allowed to call the chat. Add your real domain before deploying.
+    "ALLOWED_ORIGINS": "http://localhost:4321,https://example.com"
+  },
+  // Holds the latest dashboard status pushed by scripts/publish-status.mjs.
+  // Create it with `npx wrangler kv namespace create STATUS` and paste the id here before deploying.
+  // (Local `wrangler dev` works with the placeholder.)
+  "kv_namespaces": [{ "binding": "STATUS", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
+  // Per-IP limit: 10 questions per 60 seconds. Also set a monthly spend limit in the Anthropic console.
+  "ratelimits": [
+    {
+      "name": "CHAT_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 10, "period": 60 }
+    }
+  ]
+}

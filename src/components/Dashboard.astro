@@ -1,0 +1,161 @@
+---
+import { getCollection } from "astro:content";
+
+const projects = (await getCollection("projects")).sort((a, b) => a.data.order - b.data.order);
+const statusUrl = import.meta.env.PUBLIC_STATUS_URL ?? "/status.json";
+---
+
+<section id="projects">
+  <div class="wrap">
+    <h2 class="section-title">My <span class="accent">Projects</span></h2>
+    <p class="section-sub">What I've built, and how it's running right now.</p>
+    <p class="mono muted meta" data-status-meta>Loading status…</p>
+
+    <div class="grid" data-status-url={statusUrl}>
+      {projects.map((p) => (
+        <a class="tile card" href={`/projects/${p.id}/`} data-slug={p.id}>
+          <div class="tile-top">
+            <span class="state mono" data-state>
+              <span class="led" aria-hidden="true"></span>
+              <span data-state-label>—</span>
+            </span>
+            <span class="tag">{p.data.badge}</span>
+          </div>
+          <h3>{p.data.title}</h3>
+          <p class="muted tagline">{p.data.tagline}</p>
+          <dl class="metrics">
+            {p.data.metrics.map((m) => (
+              <div>
+                <dt>{m.label}</dt>
+                <dd class="mono" data-metric={m.key} data-unit={m.unit ?? ""}>—</dd>
+              </div>
+            ))}
+          </dl>
+          <div class="stack">
+            {p.data.stack.slice(0, 4).map((s) => <span class="tag">{s}</span>)}
+          </div>
+          <span class="more mono">Read case study →</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<script>
+  // state picks the light colour; label (optional) overrides the text next to it.
+  type ProjectStatus = { state?: "up" | "idle" | "down"; label?: string } & Record<string, unknown>;
+  // mode: "sample" (made-up numbers), "snapshot" (real numbers, updated by hand), "live" (served by a running system)
+  type Status = { mode?: "sample" | "snapshot" | "live"; updated?: string; projects?: Record<string, ProjectStatus> };
+
+  const grid = document.querySelector<HTMLElement>("[data-status-url]");
+  const meta = document.querySelector<HTMLElement>("[data-status-meta]");
+  const labels = { up: "running", idle: "idle", down: "down" } as const;
+  const modes = { sample: "Sample data", snapshot: "Snapshot", live: "Live" } as const;
+  // The publisher pushes every 5 minutes; after this long without a push the systems are treated as offline.
+  const STALE_MS = 20 * 60 * 1000;
+  const REFRESH_MS = 60 * 1000;
+
+  function ago(ms: number) {
+    const min = Math.round(ms / 60000);
+    if (min < 1) return "just now";
+    if (min < 60) return `${min} min ago`;
+    const h = Math.round(min / 60);
+    if (h < 48) return `${h} h ago`;
+    return `${Math.round(h / 24)} days ago`;
+  }
+
+  // Live feed first; if it can't be reached, fall back to the hand-updated snapshot shipped with the site.
+  async function fetchStatus(url: string): Promise<Status> {
+    const get = async (u: string) => {
+      const res = await fetch(u, { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      return (await res.json()) as Status;
+    };
+    try {
+      return await get(url);
+    } catch (e) {
+      if (url === "/status.json") throw e;
+      return get("/status.json");
+    }
+  }
+
+  async function load() {
+    if (!grid || !meta) return;
+    try {
+      const status = await fetchStatus(grid.dataset.statusUrl!);
+      const mode = status.mode ?? "sample";
+      const age = status.updated ? Date.now() - new Date(status.updated).getTime() : Infinity;
+      const stale = mode === "live" && age > STALE_MS;
+
+      for (const tile of grid.querySelectorAll<HTMLElement>("[data-slug]")) {
+        const data = status.projects?.[tile.dataset.slug!];
+        if (!data) continue;
+        const state = stale ? "down" : (data.state ?? "idle");
+        tile.querySelector<HTMLElement>("[data-state]")!.dataset.state = state;
+        tile.querySelector("[data-state-label]")!.textContent = stale ? "offline" : (data.label ?? labels[state] ?? state);
+        for (const dd of tile.querySelectorAll<HTMLElement>("[data-metric]")) {
+          const v = data[dd.dataset.metric!];
+          const unit = dd.dataset.unit ?? "";
+          if (v === undefined || v === null) continue;
+          dd.textContent =
+            unit === "days ago" && v === 0 ? "today" : `${v}${unit && unit !== "%" ? " " : ""}${unit}`;
+        }
+      }
+
+      if (mode === "live") {
+        meta.textContent = !status.updated
+          ? "Live · waiting for first heartbeat"
+          : stale
+            ? `Offline · last seen ${ago(age)}`
+            : `Live · updated ${ago(age)}`;
+      } else {
+        const when = status.updated
+          ? new Date(status.updated).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+          : "unknown";
+        meta.textContent = `${modes[mode] ?? mode} · ${when}`;
+      }
+    } catch {
+      meta.textContent = "Status unavailable";
+    }
+  }
+
+  load();
+  setInterval(() => document.visibilityState === "visible" && load(), REFRESH_MS);
+</script>
+
+<style>
+  .meta { font-size: 0.8rem; text-align: center; margin: -32px 0 32px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1000px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .tile {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 24px;
+    color: var(--text); text-decoration: none;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  .tile:hover {
+    border-color: color-mix(in srgb, var(--accent) 70%, transparent); transform: translateY(-4px);
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) { .tile:hover { transform: none; } }
+  .tile h3 { font-size: 1.35rem; margin: 0; }
+  .tagline { margin: 0; font-size: 0.92rem; }
+  .tile-top { display: flex; justify-content: space-between; align-items: center; }
+
+  .state { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+  .led { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .state[data-state="up"] .led { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .state[data-state="idle"] .led { background: var(--warn); }
+  .state[data-state="down"] .led { background: var(--down); }
+
+  .metrics {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 0;
+    padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--bg) 55%, transparent);
+  }
+  .metrics dt { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metrics dd { margin: 2px 0 0; font-size: 1.05rem; }
+  .stack { display: flex; flex-wrap: wrap; gap: 6px; }
+  .more { margin-top: auto; font-size: 0.8rem; color: var(--accent-2); }
+</style>

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+.wrangler/
+.dev.vars
+.env
+worker/src/knowledge.generated.ts
+.env.status
+.claude/
+logs/

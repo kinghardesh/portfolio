@@ -1,0 +1,79 @@
+---
+import { getCollection, render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Diagram from "../../components/Diagram.astro";
+
+export async function getStaticPaths() {
+  const projects = (await getCollection("projects")).sort((a, b) => a.data.order - b.data.order);
+  return projects.map((project, i) => ({
+    params: { slug: project.id },
+    props: { project, next: projects[(i + 1) % projects.length] },
+  }));
+}
+
+const { project, next } = Astro.props;
+const { Content } = await render(project);
+const { title, tagline, stack, repo, demo, diagram } = project.data;
+const isVideo = demo && /\.(mp4|webm)$/i.test(demo);
+---
+
+<Base title={`${title} — Case study`} description={tagline}>
+  <article class="wrap case">
+    <a href="/#projects" class="back mono">← All projects</a>
+    <header>
+      <p class="eyebrow">Case study</p>
+      <h1>{title}</h1>
+      <p class="tagline muted">{tagline}</p>
+      <div class="stack">{stack.map((s) => <span class="tag">{s}</span>)}</div>
+      {repo && <p><a href={repo} class="mono">View source →</a></p>}
+    </header>
+
+    <Diagram nodes={diagram} />
+
+    <div class="demo">
+      {demo ? (
+        isVideo ? (
+          <video src={demo} controls muted playsinline preload="metadata" />
+        ) : (
+          <img src={demo} alt={`${title} demo`} loading="lazy" />
+        )
+      ) : (
+        <div class="demo-placeholder mono muted">
+          <p>Demo clip goes here — set <code>demo</code> in this project's frontmatter (20–30 s .mp4 or .gif).</p>
+        </div>
+      )}
+    </div>
+
+    <div class="prose">
+      <Content />
+    </div>
+
+    <footer class="next">
+      <a href="/#ask" class="btn" data-open-chat data-chat-prefill={`Tell me about ${title}`}>Ask a question about this project</a>
+      <a href={`/projects/${next.id}/`} class="btn">Next: {next.data.title} →</a>
+    </footer>
+  </article>
+</Base>
+
+<style>
+  .case { padding-top: 40px; padding-bottom: 64px; max-width: 820px; }
+  .back { font-size: 0.85rem; text-decoration: none; }
+  header { margin: 24px 0 8px; }
+  h1 { font-size: clamp(2rem, 5vw, 2.8rem); }
+  .tagline { font-size: 1.1rem; }
+  .stack { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+
+  .demo { margin: 8px 0 32px; }
+  .demo video, .demo img { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); display: block; }
+  .demo-placeholder {
+    display: grid; place-items: center; text-align: center; aspect-ratio: 16 / 9;
+    padding: 16px; font-size: 0.85rem; border: 1px dashed var(--border); border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .prose :global(h2) { font-size: 1.35rem; margin-top: 2em; }
+  .prose :global(li) { margin-bottom: 0.4em; }
+  .prose :global(code) { font-family: var(--mono); font-size: 0.88em; }
+
+  .next { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); }
+</style>

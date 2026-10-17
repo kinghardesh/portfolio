@@ -1,0 +1,28 @@
+---
+import profile from "../data/profile.json";
+import { links } from "../data/links";
+---
+
+<section id="contact">
+  <div class="wrap">
+    <h2 class="section-title">Contact <span class="accent">Me</span></h2>
+    <p class="section-sub">{profile.availability}. The fastest way to reach me is email.</p>
+    <div class="card box">
+      <a class="btn primary" href={links.email}>{profile.email}</a>
+      <div class="row">
+        <a class="btn" href={links.booking} {...(links.hasBookingPage ? { target: "_blank", rel: "noopener" } : {})}>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          Book a call
+        </a>
+        {links.linkedin && <a class="btn" href={links.linkedin} rel="me" target="_blank">LinkedIn</a>}
+        {links.github && <a class="btn" href={links.github} rel="me" target="_blank">GitHub</a>}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .box { max-width: 640px; margin: 0 auto; padding: 36px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .box .primary { overflow-wrap: anywhere; text-align: center; }
+</style>

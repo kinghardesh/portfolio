@@ -1,0 +1,56 @@
+---
+import Base from "../layouts/Base.astro";
+import Hero from "../components/Hero.astro";
+import Dashboard from "../components/Dashboard.astro";
+import Skills from "../components/Skills.astro";
+import Contact from "../components/Contact.astro";
+import profile from "../data/profile.json";
+---
+
+<Base>
+  <Hero />
+  <Dashboard />
+  <Skills />
+
+  <section id="about">
+    <div class="wrap">
+      <h2 class="section-title">About <span class="accent">Me</span></h2>
+      <div class="cols">
+        <div class="card text">
+          {profile.about.map((p) => <p>{p}</p>)}
+        </div>
+        <div class="card edu">
+          <h3>Education</h3>
+          <ol class="timeline">
+            {profile.education.map((e) => (
+              <li>
+                <span class="mono muted period">{e.period}</span>
+                <strong>{e.school}</strong>
+                <p class="muted">{e.detail}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Contact />
+</Base>
+
+<style>
+  .cols { display: grid; gap: 20px; margin-top: 40px; }
+  @media (min-width: 860px) { .cols { grid-template-columns: 3fr 2fr; } }
+  .text { padding: 28px; font-size: 1.02rem; }
+  .text p:last-child { margin: 0; }
+  .edu { padding: 28px 28px 8px; }
+  .edu h3 { font-size: 1.15rem; margin: 0 0 18px; }
+  .timeline { list-style: none; margin: 0; padding: 0 0 0 6px; }
+  .timeline li { position: relative; padding: 0 0 20px 20px; border-left: 1px solid var(--border); }
+  .timeline li::before {
+    content: ""; position: absolute; left: -6px; top: 6px; width: 11px; height: 11px;
+    border-radius: 50%; background: var(--bg); border: 2px solid var(--accent);
+  }
+  .period { display: block; font-size: 0.78rem; }
+  .timeline p { margin: 4px 0 0; font-size: 0.92rem; }
+</style>

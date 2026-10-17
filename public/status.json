@@ -1,0 +1,9 @@
+{
+  "mode": "snapshot",
+  "updated": "2026-10-17T00:00:00Z",
+  "projects": {
+    "trading-agent": { "state": "up", "label": "paper trading", "trades_30d": 10, "breaker": "armed", "tests": 87 },
+    "aegis-pm": { "state": "up", "label": "3 agents live", "agents_live": 3, "checks_24h": 1859, "tests": 215 },
+    "devproof": { "state": "up", "label": "in development", "commits_30d": 59, "last_commit_days": 2, "tests": 100 }
+  }
+}

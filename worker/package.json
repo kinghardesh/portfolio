@@ -1,0 +1,21 @@
+{
+  "name": "portfolio-chat",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "node ../scripts/build-knowledge.mjs",
+    "dev": "wrangler dev",
+    "predeploy": "node ../scripts/build-knowledge.mjs",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.133.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261006.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.151.0"
+  }
+}

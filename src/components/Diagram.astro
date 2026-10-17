@@ -1,0 +1,40 @@
+---
+// A simple left-to-right flow diagram built from the project's `diagram` frontmatter.
+// Stacks vertically on narrow screens.
+interface Props {
+  nodes: { label: string; note?: string }[];
+}
+const { nodes } = Astro.props;
+---
+
+<figure class="diagram" aria-label={`Architecture: ${nodes.map((n) => n.label).join(" → ")}`}>
+  <ol>
+    {nodes.map((n) => (
+      <li>
+        <span class="label">{n.label}</span>
+        {n.note && <span class="note mono">{n.note}</span>}
+      </li>
+    ))}
+  </ol>
+</figure>
+
+<style>
+  .diagram { margin: 24px 0; padding: 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+  ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 28px; }
+  li {
+    position: relative; padding: 12px 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-2);
+    display: flex; flex-direction: column; text-align: center;
+  }
+  li:not(:last-child)::after {
+    content: "↓"; position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%);
+    color: var(--accent); font-family: var(--mono);
+  }
+  .label { font-weight: 600; font-size: 0.95rem; }
+  .note { font-size: 0.72rem; color: var(--muted); }
+  @media (min-width: 720px) {
+    ol { flex-direction: row; gap: 28px; align-items: stretch; }
+    li { flex: 1; justify-content: center; }
+    li:not(:last-child)::after { content: "→"; left: auto; right: -21px; bottom: auto; top: 50%; transform: translateY(-50%); }
+  }
+</style>

@@ -1,0 +1,91 @@
+{
+  "name": "Hardesh Agarwal",
+  "initials": "HA",
+  "role": "Backend & Applied AI Engineer",
+  "studyLine": "B.Tech CSE · SRM University · Class of 2028",
+  "pitch": "I build systems that run unattended — and know when to stop.",
+  "location": "PLACEHOLDER City, Country",
+  "availability": "Open to internships and freelance work",
+  "siteUrl": "https://example.com",
+  "email": "agarwalhardesh06@gmail.com",
+  "links": {
+    "github": "https://github.com/kinghardesh",
+    "linkedin": "https://www.linkedin.com/in/PLACEHOLDER",
+    "booking": "https://cal.com/PLACEHOLDER/intro"
+  },
+  "resume": "/resume.pdf",
+  "about": [
+    "I build backends where AI does real work and code keeps it honest. My projects put LLMs inside real systems — a trading engine, a project-management platform, a developer-evidence platform — and spend most of their effort on the parts around the model: schema validation, risk limits, human approval, evaluation, and tests.",
+    "I care about systems that tell the truth about themselves: data that is unavailable reads as unavailable, failures are logged rather than hidden, and a track record is kept in git, unedited."
+  ],
+  "education": [
+    {
+      "school": "SRM University",
+      "period": "2024 – 2028",
+      "detail": "B.Tech, Computer Science & Engineering · Class of 2028"
+    },
+    {
+      "school": "Delhi Public School, Hyderabad",
+      "period": "2012 – 2024",
+      "detail": "Schooling"
+    }
+  ],
+  "skills": [
+    {
+      "name": "Python",
+      "proof": "trading-agent",
+      "note": "Six-layer trading pipeline, pure-Python risk engine, 87 tests"
+    },
+    {
+      "name": "FastAPI",
+      "proof": "aegis-pm",
+      "note": "Alert state machine, role-based access, OAuth sign-in"
+    },
+    {
+      "name": "TypeScript / Node.js",
+      "proof": "devproof",
+      "note": "Express + Prisma API, GitHub App integration, 100 tests"
+    },
+    {
+      "name": "PostgreSQL",
+      "proof": "devproof",
+      "note": "Prisma schema with a migration-drift check in CI"
+    },
+    {
+      "name": "LLM integration",
+      "proof": "trading-agent",
+      "note": "Gemini → Ollama fallback, Pydantic-validated outputs, injection sanitizer"
+    },
+    {
+      "name": "LLM evaluation",
+      "proof": "aegis-pm",
+      "note": "Frozen 60-run baseline with gold labels and a locked scoring rubric"
+    },
+    {
+      "name": "Multi-agent systems",
+      "proof": "aegis-pm",
+      "note": "AutoGen agents with human-in-the-loop approval"
+    },
+    {
+      "name": "Security",
+      "proof": "devproof",
+      "note": "Fail-closed HMAC webhooks, HTTP-only JWT cookies, rate limiting"
+    },
+    {
+      "name": "CI & testing",
+      "proof": "devproof",
+      "note": "Migrations on an empty DB, integration tests over real HTTP"
+    },
+    {
+      "name": "Docker",
+      "proof": "trading-agent",
+      "note": "Compose stacks for app, worker, Postgres and Redis"
+    }
+  ],
+  "chatStarters": [
+    "What's the hardest problem Hardesh has solved?",
+    "How does the trading agent stop the AI from taking risks?",
+    "What did Hardesh build in DevProof?",
+    "Is Hardesh open to internships?"
+  ]
+}

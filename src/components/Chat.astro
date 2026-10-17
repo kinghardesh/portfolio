@@ -1,0 +1,380 @@
+---
+// Floating chat: a round button in the bottom-right corner that opens a panel.
+// Any element with [data-open-chat] opens it too; [data-chat-prefill="…"] also fills the input.
+import profile from "../data/profile.json";
+
+const chatUrl =
+  import.meta.env.PUBLIC_CHAT_URL ?? (import.meta.env.DEV ? "http://localhost:8787/chat" : "/api/chat");
+const firstName = profile.name.split(" ")[0];
+// "faq" answers from src/data/chat-faq.ts with no network calls; "ai" streams answers from the worker.
+const mode = import.meta.env.PUBLIC_CHAT_MODE === "ai" ? "ai" : "faq";
+---
+
+<div class="chat-widget" data-chat-url={chatUrl} data-mode={mode}>
+  <div
+    id="chat-panel"
+    class="panel"
+    role="dialog"
+    aria-labelledby="chat-title"
+    hidden
+  >
+    <header class="panel-head">
+      <div class="who">
+        <span class="avatar mono" aria-hidden="true">{profile.initials}</span>
+        <div>
+          <h2 id="chat-title">Ask about {firstName}</h2>
+          <p class="mono muted sub"><span class="online" aria-hidden="true"></span>{mode === "ai" ? "AI assistant" : "Quick answers"} · replies instantly</p>
+        </div>
+      </div>
+      <button type="button" class="icon-btn close" aria-label="Close chat">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </header>
+
+    <div class="log" role="log" aria-live="polite" aria-label="Conversation">
+      <div class="msg assistant">
+        <p>Hi! I can answer questions about {firstName}'s projects, skills and experience. Try one of these:</p>
+      </div>
+      <div class="chips">
+        {profile.chatStarters.map((q) => (
+          <button type="button" class="chip">{q}</button>
+        ))}
+      </div>
+    </div>
+
+    <form class="composer">
+      <label for="chat-input" class="sr-only">Your question</label>
+      <input id="chat-input" name="q" type="text" maxlength="500" autocomplete="off" placeholder="Ask a question…" required />
+      <button class="send" type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+    </form>
+    <p class="fine muted">
+      {mode === "ai"
+        ? <>AI answers can be wrong — for anything important, <a href="/#contact" data-close-chat>contact {firstName}</a>. Questions are sent to Anthropic's Claude.</>
+        : <>Automated answers from this portfolio. For anything else, <a href="/#contact" data-close-chat>contact {firstName}</a>.</>}
+    </p>
+  </div>
+
+  <button type="button" class="fab" aria-label={`Ask about ${firstName}'s work`} aria-controls="chat-panel" aria-expanded="false">
+    <svg class="i-chat" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16.5A2.5 2.5 0 0 1 4 14z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+      <path d="M8.5 9.5h.01M12 9.5h.01M15.5 9.5h.01" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+    </svg>
+    <svg class="i-close" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+    </svg>
+  </button>
+</div>
+
+<script>
+  import { match, fallback } from "../data/chat-faq";
+
+  type Msg = { role: "user" | "assistant"; content: string };
+
+  const root = document.querySelector<HTMLElement>(".chat-widget")!;
+  const panel = root.querySelector<HTMLElement>(".panel")!;
+  const fab = root.querySelector<HTMLButtonElement>(".fab")!;
+  const log = root.querySelector<HTMLElement>(".log")!;
+  const form = root.querySelector<HTMLFormElement>(".composer")!;
+  const input = root.querySelector<HTMLInputElement>("#chat-input")!;
+  const sendBtn = form.querySelector<HTMLButtonElement>(".send")!;
+  const history: Msg[] = [];
+  const MAX_HISTORY = 10;
+  const mobile = matchMedia("(max-width: 560px)");
+  let busy = false;
+
+  // ---- open / close ----
+
+  function setOpen(open: boolean, prefill?: string) {
+    panel.hidden = !open;
+    root.classList.toggle("open", open);
+    fab.setAttribute("aria-expanded", String(open));
+    document.documentElement.classList.toggle("chat-lock", open && mobile.matches);
+    if (open) {
+      if (prefill) input.value = prefill;
+      input.focus();
+      log.scrollTop = log.scrollHeight;
+    } else {
+      fab.focus();
+    }
+  }
+
+  fab.addEventListener("click", () => setOpen(panel.hidden));
+  root.querySelector(".close")!.addEventListener("click", () => setOpen(false));
+  root.querySelector("[data-close-chat]")!.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !panel.hidden) setOpen(false);
+  });
+  document.addEventListener("click", (e) => {
+    const trigger = (e.target as HTMLElement).closest<HTMLElement>("[data-open-chat]");
+    if (!trigger) return;
+    e.preventDefault();
+    setOpen(true, trigger.dataset.chatPrefill);
+  });
+
+  // ---- rendering ----
+
+  function escapeHtml(s: string) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  }
+
+  // Tiny, safe markdown: escape first, then allow links (relative or http/s), bold, code and bullet lists.
+  function render(md: string) {
+    const inline = (s: string) =>
+      escapeHtml(s)
+        .replace(/\[([^\]]+)\]\(((?:\/|https?:\/\/|mailto:)[^\s)]+)\)/g, (_, text, url) => {
+          const ext = url.startsWith("http");
+          return `<a href="${url}"${ext ? ' target="_blank" rel="noopener"' : ""}>${text}</a>`;
+        })
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/(^|[^*\w])\*([^*\n]+)\*(?![*\w])/g, "$1<em>$2</em>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>");
+
+    const out: string[] = [];
+    let list: string[] = [];
+    const flush = () => {
+      if (list.length) out.push(`<ul>${list.map((li) => `<li>${li}</li>`).join("")}</ul>`);
+      list = [];
+    };
+    for (const block of md.split(/\n/)) {
+      const line = block.trim();
+      if (/^[-*] /.test(line)) list.push(inline(line.slice(2)));
+      else {
+        flush();
+        if (line) out.push(`<p>${inline(line)}</p>`);
+      }
+    }
+    flush();
+    return out.join("");
+  }
+
+  function addBubble(role: Msg["role"], html: string) {
+    const el = document.createElement("div");
+    el.className = `msg ${role}`;
+    el.innerHTML = html;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  function setBusy(v: boolean) {
+    busy = v;
+    input.disabled = v;
+    sendBtn.disabled = v;
+  }
+
+  // ---- asking ----
+
+  function showChips(questions: string[]) {
+    log.querySelectorAll(".chips").forEach((c) => c.remove());
+    if (!questions.length) return;
+    const wrap = document.createElement("div");
+    wrap.className = "chips";
+    for (const q of questions) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = q;
+      wrap.appendChild(b);
+    }
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Local answers: no network. A short pause and word-by-word reveal keep it feeling conversational.
+  async function answerFromFaq(question: string, bubble: HTMLElement) {
+    const intent = match(question);
+    const answer = intent?.answer ?? fallback.answer;
+    await sleep(reducedMotion ? 0 : 450 + Math.random() * 350);
+    if (reducedMotion) {
+      bubble.innerHTML = render(answer);
+    } else {
+      const words = answer.split(/(?<=\s)/);
+      let shown = "";
+      for (const w of words) {
+        shown += w;
+        bubble.innerHTML = render(shown);
+        log.scrollTop = log.scrollHeight;
+        await sleep(12);
+      }
+    }
+    showChips(intent?.followups ?? fallback.followups);
+  }
+
+  // AI answers streamed from the worker.
+  async function answerFromAi(bubble: HTMLElement) {
+    const res = await fetch(root.dataset.chatUrl!, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: history.slice(-MAX_HISTORY) }),
+    });
+    if (!res.ok || !res.body) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? (res.status === 429 ? "Too many questions — try again in a minute." : "Something went wrong."));
+    }
+    let text = "";
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+      bubble.innerHTML = render(text);
+      log.scrollTop = log.scrollHeight;
+    }
+    if (!text.trim()) throw new Error("No answer came back. Please try again.");
+    history.push({ role: "assistant", content: text });
+  }
+
+  async function ask(question: string) {
+    if (busy || !question.trim()) return;
+    showChips([]);
+    history.push({ role: "user", content: question.trim() });
+    addBubble("user", render(question));
+    const bubble = addBubble("assistant", '<p class="typing"><span></span><span></span><span></span></p>');
+    setBusy(true);
+    try {
+      if (root.dataset.mode === "ai") await answerFromAi(bubble);
+      else await answerFromFaq(question, bubble);
+    } catch (e) {
+      history.pop(); // drop the unanswered question so history stays alternating
+      bubble.classList.add("error");
+      // fetch() throws a TypeError when the network or CORS blocks the request.
+      const msg = e instanceof TypeError ? "Couldn't reach the assistant. Please try again in a moment." : (e as Error).message;
+      bubble.innerHTML = render(msg || "Something went wrong.");
+    } finally {
+      setBusy(false);
+      input.focus();
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = input.value;
+    input.value = "";
+    ask(q);
+  });
+
+  // Starter and follow-up chips.
+  log.addEventListener("click", (e) => {
+    const chip = (e.target as HTMLElement).closest<HTMLButtonElement>(".chip");
+    if (chip) ask(chip.textContent ?? "");
+  });
+
+  // Links to /#ask (old anchor) open the chat instead.
+  if (location.hash === "#ask") setOpen(true);
+</script>
+
+<style>
+  .fab {
+    position: fixed; right: 20px; bottom: 20px; z-index: 50;
+    width: 58px; height: 58px; border-radius: 50%; border: none; cursor: pointer;
+    display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-ink);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 35%, transparent), 0 2px 6px rgb(0 0 0 / 0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .fab:hover { transform: scale(1.06); }
+  .fab:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+  .fab .i-close { display: none; }
+  .open .fab .i-chat { display: none; }
+  .open .fab .i-close { display: block; }
+  /* gentle ring that draws the eye until the chat is first opened */
+  .chat-widget:not(.open) .fab::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid var(--accent); animation: ring 2.4s ease-out infinite;
+  }
+  @keyframes ring { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
+
+  .panel {
+    position: fixed; right: 20px; bottom: 92px; z-index: 50;
+    width: 380px; height: min(600px, calc(100dvh - 120px));
+    display: flex; flex-direction: column;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
+    overflow: hidden;
+    transform-origin: bottom right;
+    animation: pop 0.18s ease-out;
+  }
+  .panel[hidden] { display: none; }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 14px 14px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2);
+  }
+  .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .avatar {
+    flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--accent); color: var(--accent-ink); font-size: 0.8rem; font-weight: 600;
+  }
+  .panel-head h2 { font-size: 0.98rem; margin: 0; letter-spacing: -0.01em; }
+  .sub { display: flex; align-items: center; gap: 6px; font-size: 0.68rem; margin: 2px 0 0; }
+  .online { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+  .icon-btn {
+    display: grid; place-items: center; width: 32px; height: 32px; flex: none;
+    background: none; border: 1px solid transparent; border-radius: 8px; color: var(--muted); cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--border); }
+
+  .log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; overscroll-behavior: contain; }
+  .log :global(.msg) { max-width: 88%; padding: 10px 13px; border-radius: 14px; font-size: 0.9rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .log :global(.msg p) { margin: 0 0 0.5em; }
+  .log :global(.msg p:last-child) { margin: 0; }
+  .log :global(.msg ul) { margin: 0.25em 0 0.5em; padding-left: 1.2em; }
+  .log :global(.msg code) { font-family: var(--mono); font-size: 0.85em; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .log :global(.msg.assistant) { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+  .log :global(.msg.user) { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+  .log :global(.msg.user a) { color: inherit; }
+  .log :global(.msg.error) { border: 1px solid var(--down); }
+
+  .log :global(.chips) { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .log :global(.chip) {
+    font: 0.84rem var(--font); text-align: left; color: var(--text); background: transparent;
+    border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; cursor: pointer;
+  }
+  .log :global(.chip:hover) { border-color: var(--accent); color: var(--accent-2); }
+  .log :global(.chip:disabled) { opacity: 0.5; cursor: not-allowed; }
+
+  .composer { display: flex; gap: 8px; padding: 12px 12px 6px; border-top: 1px solid var(--border); }
+  .composer input {
+    flex: 1; min-width: 0; font: 0.92rem var(--font); color: var(--text);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px;
+  }
+  .composer input:focus { outline: none; border-color: var(--accent); }
+  .send {
+    flex: none; width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+    display: grid; place-items: center; background: var(--accent); color: var(--accent-ink);
+  }
+  .send:disabled, .composer input:disabled { opacity: 0.5; cursor: not-allowed; }
+  .fine { font-size: 0.68rem; line-height: 1.4; margin: 0; padding: 0 14px 12px; }
+
+  .log :global(.msg .typing) { display: flex; gap: 4px; padding: 4px 0; }
+  .log :global(.msg .typing span) { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
+  .log :global(.msg .typing span:nth-child(2)) { animation-delay: 0.2s; }
+  .log :global(.msg .typing span:nth-child(3)) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+
+  /* phones: the panel becomes a full-screen sheet and the button tucks into the header */
+  @media (max-width: 560px) {
+    .fab { right: 16px; bottom: 16px; width: 54px; height: 54px; }
+    .panel { inset: 0; width: auto; height: 100dvh; border-radius: 0; border: none; }
+    .open .fab { display: none; }
+    :global(html.chat-lock), :global(html.chat-lock body) { overflow: hidden; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel { animation: none; }
+    .chat-widget .fab::after { animation: none; display: none; }
+    .fab:hover { transform: none; }
+    .log :global(.msg .typing span) { animation: none; }
+  }
+</style>
